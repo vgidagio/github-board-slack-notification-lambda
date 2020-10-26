@@ -1,0 +1,17 @@
+# Make sure not to leak env variables
+serverless.yml
+
+# Make sure not to leak slack webhook urls
+project-url-to-slack-webhook-url.js
+
+# Make sure not leak sensitive with your fixtures
+fixtures/
+
+# Servlerss specific folder
+.serverless/
+
+# Node stuff
+node_modules/
+
+# Bad file!
+redirect.js
