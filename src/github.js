@@ -17,8 +17,6 @@ module.exports.notify = async (event, context, callback) => {
   const gitHubEvent = event.headers['X-GitHub-Event'];
   const signature = event.headers['X-Hub-Signature'];
   const payload = event.body;
-  const body = JSON.parse(payload);
-  const { sender, action } = body;
 
   if (!GITHUB_WEBHOOK_SECRET) {
     callback(new Error('Missing GITHUB_WEBHOOK_SECRET'));
@@ -55,6 +53,9 @@ module.exports.notify = async (event, context, callback) => {
       ]
     }
   });
+
+  const body = JSON.parse(payload);
+  const { sender, action } = body;
 
   if (action !== 'moved') {
     const message = `Action ${action} was not forwarded to Slack.`;
@@ -162,7 +163,7 @@ module.exports.notify = async (event, context, callback) => {
       console.log('Slack message sent on webhook:', slackWebhookUrl);
     }
   } catch (err) {
-    console.log('Could not send message to slack.');
+    console.log('Could not send message to Slack.');1
     console.log(err);
     callback(err);
   }

@@ -12,6 +12,7 @@
   "dependencies": {
     "@octokit/request": "^5.4.9",
     "@octokit/webhooks": "^7.15.0",
+    "aws-sdk": "^2.779.0",
     "got": "^11.8.0"
   }
 }
