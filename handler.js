@@ -4,16 +4,17 @@ const { request: gitHubRequest } = require('@octokit/request');
 
 // Mine
 const getMessage = require('./message-template');
-const projectUrlToSlackWebhookUrl = require('./project-url-to-slack-webhook-url');
+const {
+  getAllProjectContentUrls,
+  getSlackWebhooksForProjectContentUrl
+} = require('./data');
+
 
 // Env
 const { GITHUB_WEBHOOK_SECRET, GITHUB_TOKEN } = process.env;
 
-const sendToSlack = (slackWebhookUrl, message) =>
-  got.post(slackWebhookUrl, { json: message })
-
 module.exports.notify = async (event, context, callback) => {
-  const githubEvent = event.headers['X-GitHub-Event'];
+  const gitHubEvent = event.headers['X-GitHub-Event'];
   const signature = event.headers['X-Hub-Signature'];
   const payload = event.body;
   const body = JSON.parse(payload);
@@ -33,9 +34,9 @@ module.exports.notify = async (event, context, callback) => {
     });
 
     await webhooks.verifyAndReceive({
-      name: githubEvent,
-      signature: signature,
+      name: gitHubEvent,
       payload: payload,
+      signature: signature,
     });
   } catch (e) {
     callback(
@@ -68,18 +69,22 @@ module.exports.notify = async (event, context, callback) => {
     return;
   }
 
-  const { creator, note, column_id, content_url, project_url } = body.project_card;
+  const { project_card, changes } = body;
+  const {
+    creator, note, column_id, content_url,
+    project_url: project_content_url
+  } = project_card;
 
 
   // Project information
-  const projectResponse = await requestWithAuth(project_url);
-  const projectUrl = projectResponse.data.html_url;
-  const projectName = projectResponse.data.name;
+  const { data: project } = await requestWithAuth(project_content_url);
+  const projectUrl = project.html_url;
+  const projectName = project.name;
 
   // Filter out un-configured
-  const allConfiguredProjects = Object.keys(projectUrlToSlackWebhookUrl);
-  if (!allConfiguredProjects.includes(project_url)) {
-    const message = `No webhook configured for ${projectName} with URL ${project_url}`;
+  const allProjectContentUrls = getAllProjectContentUrls();
+  if (!allProjectContentUrls.includes(project_content_url)) {
+    const message = `No webhook configured for ${projectName} with URL ${project_content_url}`;
     console.log(message);
     const response = {
       statusCode: 200,
@@ -90,7 +95,7 @@ module.exports.notify = async (event, context, callback) => {
   }
 
   // Column information
-  const old_column_id = body.changes.column_id.from;
+  const old_column_id = changes.column_id.from;
   const oldStatus = await requestWithAuth('GET /projects/columns/{column_id}', { column_id: old_column_id });
   const newStatus = await requestWithAuth('GET /projects/columns/{column_id}', { column_id });
   const fromColName = oldStatus.data.name;
@@ -108,16 +113,15 @@ module.exports.notify = async (event, context, callback) => {
   let subjectUrl;
 
   if (isIssue) {
-    const issueResponse = await requestWithAuth(content_url);
-    const { data } = issueResponse;
-    subjectName = data.title;
-    subjectUrl = data.html_url;
-    authorName = data.user.login;
-    authorUrl = data.user.html_url;
-    authorAvatar = data.user.avatar_url;
+    const { data: issue } = await requestWithAuth(content_url);
+    subjectName = issue.title;
+    subjectUrl = issue.html_url;
+    authorName = issue.user.login;
+    authorUrl = issue.user.html_url;
+    authorAvatar = issue.user.avatar_url;
   } else {
     subjectName = note;
-    subjectUrl = projectResponse.data.html_url;
+    subjectUrl = project.html_url;
   }
 
   // Mover information: name, url, avatar
@@ -151,18 +155,17 @@ module.exports.notify = async (event, context, callback) => {
   });
 
   try {
-    Object.keys(projectUrlToSlackWebhookUrl)
-      .filter(projectUrl => projectUrl === project_url)
-      .forEach(projectUrl => {
-        const slackWebhookUrl = projectUrlToSlackWebhookUrl[projectUrl];
-        sendToSlack(slackWebhookUrl, slackMessage);
-      });
+    const slackWebhooks = getSlackWebhooksForProjectContentUrl(project_content_url);
+    for(let i = 0; i < slackWebhooks.length; i++){
+      const slackWebhookUrl = slackWebhooks[i];
+      await got.post(slackWebhookUrl, { json: slackMessage });
+      console.log('Slack message sent on webhook:', slackWebhookUrl);
+    }
   } catch (err) {
     console.log('Could not send message to slack.');
     console.log(err);
     callback(err);
   }
-
 
   const response = {
     statusCode: 200,

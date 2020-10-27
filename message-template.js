@@ -28,8 +28,7 @@ module.exports = ({
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text:
-`${subjectType} _<${subjectName}|${subjectUrl}>_ moved\n\n
+          text: `${subjectType} _<${subjectUrl}|${subjectName}>_ moved\n\n
 *${fromColName}* -> *${toColName}*\n\n
 Moved by <${moverUrl}|${moverName}>`,
         },
@@ -42,11 +41,14 @@ Moved by <${moverUrl}|${moverName}>`,
 
       {
         type: 'context',
-        elements: {
-          type: 'mrkdwn',
-          text: `On Board <${projectUrl}|${projectName}>`,
-        }
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `On Board <${projectUrl}|${projectName}>`,
+          }
+        ]
       },
+
       {
         type: 'actions',
         elements: [
