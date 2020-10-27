@@ -12,11 +12,6 @@ module.exports = ({
                     projectName,
                     projectUrl,
 
-                    // Author
-                    authorName,
-                    authorUrl,
-                    authorAvatar,
-
                     // Mover
                     moverName,
                     moverUrl,

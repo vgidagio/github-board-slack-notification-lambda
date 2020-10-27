@@ -156,7 +156,7 @@ module.exports.notify = async (event, context, callback) => {
 
   try {
     const slackWebhooks = getSlackWebhooksForProjectContentUrl(project_content_url);
-    for(let i = 0; i < slackWebhooks.length; i++){
+    for (let i = 0; i < slackWebhooks.length; i++) {
       const slackWebhookUrl = slackWebhooks[i];
       await got.post(slackWebhookUrl, { json: slackMessage });
       console.log('Slack message sent on webhook:', slackWebhookUrl);

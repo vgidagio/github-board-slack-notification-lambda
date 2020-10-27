@@ -1,4 +1,4 @@
-const list = require('./data/project-url-to-slack-webhook-url');
+const list = require('./project-url-to-slack-webhook-url');
 
 
 module.exports.getAllProjectContentUrls = () =>
