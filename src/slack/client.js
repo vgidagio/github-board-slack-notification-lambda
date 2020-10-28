@@ -43,7 +43,7 @@ class Client {
       channel: this.channel
     };
 
-
+    // If it's a response_url it will be a full url
     const targetUrl = endPoint.match(/^http/i)
         ? endPoint
         : `https://slack.com/api/${endPoint}`
@@ -54,7 +54,6 @@ class Client {
       targetUrl,
       {
         json: message,
-        responseType: 'json'
       }
     );
     return response.body;
@@ -112,19 +111,17 @@ class Client {
    * @param {boolean} ephemeral - Flag to make the message ephemeral
    * @return {Promise} A promise with the API response
    */
-  reply(message, ephemeral) {
-    // invalid ephemeral requests
+  async reply(message, ephemeral) {
+
     if (!this.response_url && ephemeral) {
+      // invalid ephemeral requests
       return Promise.reject('Message can\'t be private');
-
-      // slash commands and interactive messages
     } else if (this.response_url) {
+      // slash commands and interactive messages
       if (!ephemeral) message.response_type = 'in_channel';
-      console.log('here!');
-      return this.send(this.response_url, message);
-
-      // incoming webhooks
+      return await this.send(this.response_url, message);
     } else if (this.auth.incoming_webhook && !this.channel && !message.channel) {
+      // incoming webhooks
       return this.send(this.auth.incoming_webhook.url, message);
 
       // fallback

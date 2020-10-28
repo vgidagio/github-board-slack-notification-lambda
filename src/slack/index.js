@@ -55,7 +55,6 @@ class Slack extends EventEmitter {
           clientSecret: this.options.clientSecret,
         };
         const response = await Client.install(options, payload);
-        console.log('response:', response);
         const item = {
           id: response.team.id,
           access_token: response.access_token,
@@ -64,7 +63,6 @@ class Slack extends EventEmitter {
           channel_id: response.incoming_webhook.channel_id,
           team: response.team,
         };
-        console.log('item:', item);
         const result = await this.oauthStore.put(item);
         console.log('result:', result);
 
@@ -115,7 +113,11 @@ class Slack extends EventEmitter {
       };
       return callback(null, response);
     } else {
-      callback();
+      const response = {
+        statusCode: 200,
+        body: null
+      };
+      callback(null, response);
     }
 
     // Ignore Bot Messages
