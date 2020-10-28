@@ -1,7 +1,8 @@
 const EventEmitter = require('events');
+const qs = require('querystring');
 
 const Client = require('./client');
-const Store = require('./dynamo');
+const oauthStore = require('./dynamo');
 
 
 class Slack extends EventEmitter {
@@ -14,98 +15,117 @@ class Slack extends EventEmitter {
     installRedirect: null,
     verificationToken: null,
     ignoreBots: true,
+    clientId: null,
+    clientSecret: null,
+    clientScopes: null,
   }) {
     super();
     this.options = options;
-    this.store = new Store(options.oauthTableName);
+    this.oauthStore = new oauthStore(options.oauthTableName);
     this.ignoreBots = options.ignoreBots;
   }
 
-
-  /**
-   * Default Lambda Handler
-   *
-   * @param {Object} event - The Lambda event
-   * @param {Object} context - The Lambda context
-   * @param {Function} callback - The Lambda callback
-   */
   handler(event, context, callback) {
-    switch(event.method) {
-      case "GET": this.oauth(event, context, callback); break;
-      case "POST": this.event(event, context, callback); break;
+    switch (event.httpMethod) {
+      case 'GET':
+        this.oauth(event, context, callback);
+        break;
+      case 'POST':
+        this.event(event, context, callback);
+        break;
     }
   }
 
-  /**
-   * OAuth Lambda Handler
-   *
-   * @param {Object} event - The Lambda event
-   * @param {Object} context - The Lambda context
-   * @param {Function} callback - The Lambda callback
-   */
-  oauth(event, context, callback) {
-    let client = new Client();
-    let payload = event.query;
-    let save = this.store.save.bind(this.store);
+  async oauth(event, context, callback) {
+    let payload = event.queryStringParameters;
+
+    console.log('payload:', payload);
     let redirectUrl = `${this.options.installRedirect}?state=${payload.state}`;
 
-    let fail = error => {
+    const fail = error => {
       this.emit('*', error, payload);
       this.emit('install_error', error, payload);
       callback(`${redirectUrl}&error=${JSON.stringify(error)}`);
     }
 
-    let success = result => {
-      this.emit('*', payload);
-      this.emit('install_success', payload);
-      callback(redirectUrl);
-    }
-
     if (payload.code) {
-      // install app
-      client.install(payload).then(save).then(success).catch(fail);
+      try {
+        const options = {
+          clientId: this.options.clientId,
+          clientSecret: this.options.clientSecret,
+        };
+        const response = await Client.install(options, payload);
+        console.log('response:', response);
+        const item = {
+          id: response.team.id,
+          access_token: response.access_token,
+          url: response.incoming_webhook.url,
+          channel: response.incoming_webhook.channel,
+          channel_id: response.incoming_webhook.channel_id,
+          team: response.team,
+        };
+        console.log('item:', item);
+        const result = await this.oauthStore.put(item);
+        console.log('result:', result);
+
+        this.emit('*', payload);
+        this.emit('install_success', payload);
+
+        const redirect = {
+          statusCode: 301,
+          headers: {
+            Location: redirectUrl,
+          },
+          body: '',
+        };
+
+        callback(null, redirect);
+      } catch (e) {
+        fail(e);
+      }
     } else {
       // sends a 301 redirect
-      callback(client.getAuthUrl(payload));
+      // wut.
+      //callback(this.client.getAuthUrl(payload));
     }
   }
 
-
-  /**
-   * Event Lambda Handler
-   *
-   * @param {Object} event - The Lambda event
-   * @param {Object} context - The Lambda context
-   * @param {Function} callback - The Lambda callback
-   */
-  event(event, context, callback) {
+  async event(event, context, callback) {
+    console.log('event:', event);
     let payload = event.body;
-    let id = payload.team_id;
-    let token = this.options.verificationToken;
-
-    // Interactive Messages
-    if (payload.payload) {
-      payload = JSON.parse(payload.payload);
-      id = payload.team.id;
+    if (payload.charAt(0) === "{") {
+      payload = JSON.parse(payload);
+    } else {
+      payload = qs.parse(payload);
     }
 
+    console.log('payload:', payload);
+
     // Verification Token
-    if (token && token !== payload.token)
-      return context.fail("[401] Unauthorized");
+    const verificationToken = this.options.verificationToken;
+    if (verificationToken && verificationToken !== payload.token) {
+      return context.fail('[401] Unauthorized');
+    }
 
     // Events API challenge
-    if (payload.challenge)
-      return callback(null, payload.challenge);
-    else
+    if (payload.challenge) {
+      const response = {
+        statusCode: 200,
+        body: payload.challenge
+      };
+      return callback(null, response);
+    } else {
       callback();
+    }
 
     // Ignore Bot Messages
     if (!this.ignoreBots || !(payload.event || payload).bot_id) {
       // Load Auth And Trigger Events
-      this.store.get(id).then(this.notify.bind(this, payload));
+      const teamId = payload.team_id;
+      const auth = await this.oauthStore.get(teamId);
+      this.notify(payload, auth);
     }
   }
-
 
   /**
    * Notify message and process events

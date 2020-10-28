@@ -1,58 +1,35 @@
 const got = require('got');
-const { Webhooks } = require('@octokit/webhooks');
-const { request: gitHubRequest } = require('@octokit/request');
 
 // Mine
-const getMessage = require('./message-template');
 const {
   getAllProjectContentUrls,
   getSlackWebhooksForProjectContentUrl
 } = require('./data');
+const getMessage = require('./message-template');
+const GitHub = require('./github/index');
 
 
 // Env
-const { GITHUB_WEBHOOK_SECRET, GITHUB_TOKEN } = process.env;
+const { GITHUB_WEBHOOK_SECRET, GITHUB_TOKEN, GITHUB_ORG } = process.env;
+const gitHub = new GitHub({
+  webhookSecret: GITHUB_WEBHOOK_SECRET,
+  authToken: GITHUB_TOKEN,
+  org: GITHUB_ORG,
+});
 
-module.exports.notify = async (event, context, callback) => {
+exports.webhook = async (event, context, callback) => {
   const gitHubEvent = event.headers['X-GitHub-Event'];
   const signature = event.headers['X-Hub-Signature'];
   const payload = event.body;
 
-  if (!GITHUB_WEBHOOK_SECRET) {
-    callback(new Error('Missing GITHUB_WEBHOOK_SECRET'));
-  }
-
-  if (!GITHUB_TOKEN) {
-    callback(new Error('Missing GITHUB_TOKEN'));
-  }
-
   try {
-    const webhooks = new Webhooks({
-      secret: GITHUB_WEBHOOK_SECRET,
-    });
-
-    await webhooks.verifyAndReceive({
-      name: gitHubEvent,
-      payload: payload,
-      signature: signature,
-    });
+    await gitHub.validateEvent(gitHubEvent, payload, signature);
   } catch (e) {
     callback(
       new Error('X-Hub-Signature and Calculated Signature do not match.')
     );
     throw e;
   }
-
-  const requestWithAuth = gitHubRequest.defaults({
-    headers: {
-      authorization: `token ${GITHUB_TOKEN}`,
-    },
-    mediaType: {
-      previews: [
-        'inertia'
-      ]
-    }
-  });
 
   const body = JSON.parse(payload);
   const { sender, action } = body;
@@ -78,7 +55,7 @@ module.exports.notify = async (event, context, callback) => {
 
 
   // Project information
-  const { data: project } = await requestWithAuth(project_content_url);
+  const { data: project } = await gitHub.request(project_content_url);
   const projectUrl = project.html_url;
   const projectName = project.name;
 
@@ -97,8 +74,8 @@ module.exports.notify = async (event, context, callback) => {
 
   // Column information
   const old_column_id = changes.column_id.from;
-  const oldStatus = await requestWithAuth('GET /projects/columns/{column_id}', { column_id: old_column_id });
-  const newStatus = await requestWithAuth('GET /projects/columns/{column_id}', { column_id });
+  const oldStatus = await gitHub.request('GET /projects/columns/{column_id}', { column_id: old_column_id });
+  const newStatus = await gitHub.request('GET /projects/columns/{column_id}', { column_id });
   const fromColName = oldStatus.data.name;
   const toColName = newStatus.data.name;
 
@@ -114,7 +91,7 @@ module.exports.notify = async (event, context, callback) => {
   let subjectUrl;
 
   if (isIssue) {
-    const { data: issue } = await requestWithAuth(content_url);
+    const { data: issue } = await gitHub.request(content_url);
     subjectName = issue.title;
     subjectUrl = issue.html_url;
     authorName = issue.user.login;
@@ -176,3 +153,26 @@ module.exports.notify = async (event, context, callback) => {
   };
   callback(null, response);
 };
+
+
+exports.projects = async (event, context, callback) => {
+  try {
+    let repo = false;
+    if (event.queryStringParameters && event.queryStringParameters.repo) {
+      repo = event.queryStringParameters.repo;
+    }
+    const projects = Boolean(repo)
+      ? await gitHub.fetchRepoProjects(repo)
+      : await gitHub.fetchOrgProjects();
+    const abbrProjects = projects.map(({name, url}) => `${name} - ${url}`);
+    const body = { abbrProjects };
+    const response = {
+      statusCode: 200,
+      body: JSON.stringify(body),
+    };
+    callback(null, response);
+  } catch(e) {
+    console.log(e);
+    callback(new Error(e));
+  }
+}

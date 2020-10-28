@@ -1,34 +1,21 @@
-const AWS = require("aws-sdk");
+const AWS = require('aws-sdk');
 const dynamo = new AWS.DynamoDB.DocumentClient();
 
-class Store {
+class DynoTable {
   tableName;
 
   constructor(tableName) {
     this.tableName = tableName;
   }
 
-  /**
-   * Dynamo Save
-   *
-   * @param {Object} data - The data to save
-   * @return {Promise} A Promise with the save results
-   */
-  save(data) {
-    data.id = data.team_id;
+
+  async put(data) {
     return this.query('put', { Item: data });
   }
 
-  /**
-   * Dynamo Get
-   *
-   * @param {String} id - The record's key
-   * @return {Promise} A Promise with the get result
-   */
-  get(id) {
-    return this.query('get', { Key: { id: id } }).then(d => {
-      return Promise.resolve(d.Item);
-    });
+  async get(id) {
+    const d = await this.query('get', { Key: { id: id } })
+    return d.Item;
   }
 
   /**
@@ -49,7 +36,7 @@ class Store {
   }
 }
 
-module.exports = Store;
+module.exports = DynoTable;
 
 
 
