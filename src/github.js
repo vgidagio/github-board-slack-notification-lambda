@@ -60,7 +60,7 @@ exports.webhook = async (event, context, callback) => {
   const projectName = project.name;
 
   // Filter out un-configured
-  const allProjectContentUrls = getAllProjectContentUrls();
+  const allProjectContentUrls = await getAllProjectContentUrls();
   if (!allProjectContentUrls.includes(project_content_url)) {
     const message = `No webhook configured for ${projectName} with URL ${project_content_url}`;
     console.log(message);
@@ -133,14 +133,14 @@ exports.webhook = async (event, context, callback) => {
   });
 
   try {
-    const slackWebhooks = getSlackWebhooksForProjectContentUrl(project_content_url);
+    const slackWebhooks = await getSlackWebhooksForProjectContentUrl(project_content_url);
     for (let i = 0; i < slackWebhooks.length; i++) {
       const slackWebhookUrl = slackWebhooks[i];
       await got.post(slackWebhookUrl, { json: slackMessage });
       console.log('Slack message sent on webhook:', slackWebhookUrl);
     }
   } catch (err) {
-    console.log('Could not send message to Slack.');1
+    console.log('Could not send message to Slack.');
     console.log(err);
     callback(err);
   }

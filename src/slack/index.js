@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 const qs = require('querystring');
 
 const Client = require('./client');
-const oauthStore = require('./dynamo');
+const oauthStore = require('../aws/DynamoTable');
 
 
 class Slack extends EventEmitter {

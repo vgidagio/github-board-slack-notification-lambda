@@ -1,15 +1,22 @@
-const list = require('./data/project-url-to-slack-webhook-url');
+const DynamoTable = require('./aws/DynamoTable');
+const store = new DynamoTable(process.env.ASSOC_TABLE_NAME);
 
 
-module.exports.getAllProjectContentUrls = () =>
-  list.reduce((accumulator, { project_content_url }) => {
-    return [...accumulator, project_content_url];
-  }, [])
+module.exports.addAssoc = async (channel, project_url) => {
+  const id = channel + '--' + project_url;
+  return await store.put({ id, channel, project_url });
+}
 
-module.exports.getSlackWebhooksForProjectContentUrl = (project_content_url) =>
-  list.reduce((accumulator, item) => {
-    if (item.project_content_url === project_content_url) {
-      return [...accumulator, item.slack_webhook_url];
+module.exports.getAllProjectContentUrls = async () => {
+  return await store.list();
+}
+
+module.exports.getSlackWebhooksForProjectContentUrl = async (project_content_url) => {
+  const list = await store.list();
+  return list.reduce((accumulator, item) => {
+    if (item.project_url === project_content_url) {
+      return [...accumulator, item.project_url];
     }
     return accumulator;
   }, [])
+}
