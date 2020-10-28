@@ -25,12 +25,10 @@ class Client {
     return body;
   }
 
-
   constructor(auth, payload) {
     this.auth = auth;
     this.payload = payload;
   }
-
 
   async send(endPoint, message) {
     // convert the string message to a message object
@@ -39,7 +37,6 @@ class Client {
     // set defaults when available
     message = {
       ...message,
-      token: this.token,
       channel: this.channel
     };
 
@@ -53,6 +50,9 @@ class Client {
     const response = await got.post(
       targetUrl,
       {
+        headers: {
+          authorization: `Bearer ${this.token}`
+        },
         json: message,
       }
     );
@@ -78,7 +78,7 @@ class Client {
    * @return {String} the payload's channel
    */
   get channel() {
-    let payload = this.payload, event = payload.event, auth = this.auth;
+    let payload = this.payload, event = payload.event;
     // Slash Commands
     if (payload.channel_id) return payload.channel_id;
 
@@ -112,7 +112,6 @@ class Client {
    * @return {Promise} A promise with the API response
    */
   async reply(message, ephemeral) {
-
     if (!this.response_url && ephemeral) {
       // invalid ephemeral requests
       return Promise.reject('Message can\'t be private');
@@ -122,11 +121,10 @@ class Client {
       return await this.send(this.response_url, message);
     } else if (this.auth.incoming_webhook && !this.channel && !message.channel) {
       // incoming webhooks
-      return this.send(this.auth.incoming_webhook.url, message);
-
-      // fallback
+      return await this.send(this.auth.incoming_webhook.url, message);
     } else {
-      return this.say(message);
+      // fallback
+      return await this.say(message);
     }
   }
 

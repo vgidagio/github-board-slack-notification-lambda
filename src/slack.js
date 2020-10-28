@@ -32,7 +32,6 @@ slack.on('slash_command', async (msg, bot) => {
   switch(command) {
     case '/list-projects':
       const repo = text;
-
       try {
         const projects = Boolean(repo)
           ? await gitHub.fetchRepoProjects(repo)
@@ -52,12 +51,21 @@ slack.on('slash_command', async (msg, bot) => {
           text: ':sad_cowboy: Could not fetch the projects',
         });
       }
-
-      console.log('Replied to slack');
+      break;
+    case '/subscribe-project':
+      const projectUrl = text;
+      const project = await gitHub.fetchProject(projectUrl);
+      const reply = await bot.say({
+        text: `Subscribed this channel to board <${project.html_url}|${project.name}> with url ${projectUrl}.\n` +
+        `You will start receiving notifications here :tada:`,
+      });
+      console.log('reply:', reply);
       break;
     default:
-      return bot.replyPrivate({
-        text: ':wave:'
+      return await bot.replyPrivate({
+        text: `:wave: received *${command}*, with\nParams: *${text}*`
       });
   }
+
+  console.log('Replied to slack');
 });

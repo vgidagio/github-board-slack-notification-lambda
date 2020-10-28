@@ -55,7 +55,7 @@ exports.webhook = async (event, context, callback) => {
 
 
   // Project information
-  const { data: project } = await gitHub.request(project_content_url);
+  const project = await gitHub.fetchProject(project_content_url);
   const projectUrl = project.html_url;
   const projectName = project.name;
 

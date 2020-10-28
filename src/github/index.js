@@ -58,6 +58,10 @@ class GitHub {
     return response.data;
   }
 
+  async fetchProject(url) {
+    const response = await this.request(url);
+    return response.data;
+  }
 
   // will get overwritten
   request () {};
