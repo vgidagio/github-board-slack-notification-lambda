@@ -9,7 +9,7 @@ module.exports.addSubscription = async ({channel_id, project_url, project}) => {
   return await store.put({ id, channel_id, project_url, project });
 }
 
-module.exports.removeSubscription = async ({channel_id, project_url, project}) => {
+module.exports.removeSubscription = async ({channel_id, project_url }) => {
   const id = getId(channel_id, project_url)
   return await store.delete(id)
 }

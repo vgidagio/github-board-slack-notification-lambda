@@ -1,4 +1,5 @@
-const projectToBlock = (project, isSubscribed) => {
+const projectToBlock = (project, isSubscribed, repo) => {
+  const value = project.url + '--' + repo;
   let accessory = {
     type: 'button',
     text: {
@@ -7,7 +8,7 @@ const projectToBlock = (project, isSubscribed) => {
       emoji: true
     },
     style: 'primary',
-    value: project.url,
+    value,
     action_id: 'subscribe'
   };
 
@@ -20,7 +21,7 @@ const projectToBlock = (project, isSubscribed) => {
         emoji: true
       },
       style: 'danger',
-      value: project.url,
+      value,
       action_id: 'unsubscribe'
     };
   }
@@ -34,24 +35,45 @@ const projectToBlock = (project, isSubscribed) => {
   }
 }
 
-module.exports.getListProjectsMessage = (projects, allSubscriptions) => {
+module.exports.getListProjectsMessage = (projects, allSubscriptions, repo) => {
   const projectBlocks = projects.map((project) => {
-    const isSubscribed = allSubscriptions.find(({project_url}) => project_url === project.url);
-    return projectToBlock(project, isSubscribed)
+    const isSubscribed = allSubscriptions.find(({ project_url }) => project_url === project.url);
+    return projectToBlock(project, isSubscribed, repo)
   });
+  const title = repo
+    ? `Projects for *${repo}*`
+    : `Projects for Organization`;
+
   return {
     blocks: [
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: 'Projects'
+          text: title
         }
       },
       {
-        type: "divider"
+        type: 'divider'
       },
       ...projectBlocks,
+      {
+        type: 'divider'
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'Looks good, bye!',
+              emoji: true
+            },
+            action_id: 'bye',
+          }
+        ]
+      },
     ]
   }
 }

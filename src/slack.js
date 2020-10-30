@@ -28,104 +28,95 @@ const gitHub = new GitHub({
 // The function that AWS Lambda will call
 exports.handler = slack.handler.bind(slack);
 
+const getListMessage = async (channelId, repo) => {
+  const projects = Boolean(repo)
+    ? await gitHub.fetchRepoProjects(repo)
+    : await gitHub.fetchOrgProjects();
+  const allSubscriptions = await store.getSubscriptionsForChannelId(channelId);
+  return getListProjectsMessage(projects, allSubscriptions, repo);
+}
+
 const onListProjects = async (channelId, repo, bot) => {
   try {
-    const projects = Boolean(repo)
-      ? await gitHub.fetchRepoProjects(repo)
-      : await gitHub.fetchOrgProjects();
-    const allSubscriptions = await store.getSubscriptionsForChannelId(channelId);
-    const message = getListProjectsMessage(projects, allSubscriptions);
-    await bot.reply(message);
+    const message = await getListMessage(channelId, repo);
+    await bot.replyPrivate(message);
   } catch (e) {
+    console.error(e);
     await bot.replyPrivate({
       text: ':sad_cowboy: Could not fetch the projects',
     });
   }
 }
 
-const onUnsubscribeAction = async (channelId, projectUrl, bot) => {
-  try {
-    const project = await gitHub.fetchProject(projectUrl);
-    await store.removeSubscription({
-      channel_id: channelId,
-      project_url: projectUrl,
-    });
-    const confirmation =
-      `\n⚠️️ Unsubscribed this channel from board <${project.html_url}|${project.name}>!`;
-
-    // Reply
-    await bot.reply({ text: confirmation }, false);
-  } catch (e) {
-    console.error(e);
-    await bot.replyPrivate({
-      text: ':sad_cowboy: Could not subscribe to project',
-    });
-  }
+const onUnsubscribeAction = async (channelId, project) => {
+  return await store.removeSubscription({
+    channel_id: channelId,
+    project_url: project.url,
+  });
 }
 
-const onSubscribeAction = async (channelId, projectUrl, bot) => {
-  try {
-    const project = await gitHub.fetchProject(projectUrl);
-    await store.addSubscription({
-      channel_id: channelId,
-      project_url: projectUrl,
-      project
-    });
-    const confirmation =
-      `\n:tada: Subscribed this channel to board <${project.html_url}|${project.name}>!`;
-
-    // Reply
-    const c = await bot.reply({
-      text: confirmation,
-      replace_original: true,
-    });
-    console.log('c:', c);
-  } catch (e) {
-    console.error(e);
-    await bot.replyPrivate({
-      text: ':sad_cowboy: Could not subscribe to project',
-    });
-  }
+const onSubscribeAction = async (channelId, project) => {
+  return await store.addSubscription({
+    channel_id: channelId,
+    project_url: project.url,
+    project
+  });
 }
 
 slack.on('slash_command', async (msg, bot) => {
-  const { text, command } = msg;
-  const channelId = msg.channel_id;
-  switch (command) {
-    case '/list-projects':
-      await onListProjects(channelId, text, bot);
-      break;
-    case '/subscribe-project':
-      //await onSubscribeAction(channelId, text, bot);
-      break;
-    default:
-      return await bot.replyPrivate({
-        text: `:wave: received *${command}*, with\nParams: *${text}*`
-      });
+  const { channel_id: channelId, text: repo, command } = msg;
+  if (command === '/list-projects') {
+    await onListProjects(channelId, repo, bot);
+  } else {
+    await bot.replyPrivate({
+      text: `:wave: received *${command}*`
+    });
   }
 
   console.log('Replied to slack');
 });
 
 slack.on('block_actions', async (msg, bot) => {
-  console.log('msg:', msg);
   const action = msg.actions[0];
   const actionId = action.action_id;
 
+  if (actionId === 'bye') {
+    return await bot.replyPrivate({ delete_original: true });
+  }
+
   if (actionId !== 'subscribe' && actionId !== 'unsubscribe') {
     return await bot.replyPrivate({
-      text: `:wave: Received block_action *${action}*`
+      text: `:wave: received block_action *${action}*`
     });
   }
 
-  const projectUrl = action.value;
+  const projectUrl = action.value.split('--')[0];
+  const repo = action.value.split('--')[1];
   const channelId = msg.channel.id;
-  switch(actionId) {
-    case 'subscribe':
-      await onSubscribeAction(channelId, projectUrl, bot);
-      break;
-    case 'unsubscribe':
-      await onUnsubscribeAction(channelId, projectUrl, bot);
-      break;
+
+  try {
+    const project = await gitHub.fetchProject(projectUrl);
+    const fn = actionId === 'subscribe'
+      ? onSubscribeAction
+      : onUnsubscribeAction;
+
+    const response = await fn(channelId, project);
+    console.log('response:', response);
+
+    const repoName = repo ? repo : 'org level';
+    const notification = actionId === 'subscribe'
+      ? `:bell: Subscribed to board <${project.html_url}|${project.name}> (${repoName})`
+      : `:no_bell: Unsubscribed from board <${project.html_url}|${project.name}> (${repoName})`;
+
+    const message = await getListMessage(channelId, repo);
+    console.log('message:', message);
+
+    await bot.replyPrivate({ ...message, replace_original: true });
+    await bot.say(notification);
+  } catch(e) {
+    console.error(e);
+    await bot.replyPrivate({
+      text: ':sad_cowboy: Could not perform action',
+    });
   }
 })
