@@ -22,6 +22,10 @@ class DynamoTable {
     return data.Items;
   }
 
+  async delete(id) {
+    return await this.query('delete', { Key: { id: id } })
+  }
+
   query(method, params) {
     params.TableName = this.tableName;
     return dynamoTable[method](params).promise();

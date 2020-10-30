@@ -89,12 +89,16 @@ class Slack extends EventEmitter {
   }
 
   async event(event, context, callback) {
-    console.log('event:', event);
+    console.log('event:', JSON.stringify(event));
     let payload = event.body;
     if (payload.charAt(0) === "{") {
       payload = JSON.parse(payload);
     } else {
       payload = qs.parse(payload);
+    }
+
+    if (payload.payload) {
+      payload = JSON.parse(payload.payload);
     }
 
     console.log('payload:', payload);
@@ -123,7 +127,7 @@ class Slack extends EventEmitter {
     // Ignore Bot Messages
     if (!this.ignoreBots || !(payload.event || payload).bot_id) {
       // Load Auth And Trigger Events
-      const teamId = payload.team_id;
+      const teamId = payload.team_id || payload.team.id;
       const auth = await this.oauthStore.get(teamId);
       this.notify(payload, auth);
     }

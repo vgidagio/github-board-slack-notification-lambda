@@ -1,12 +1,10 @@
 const got = require('got');
 
 // Mine
-const {
-  getAllProjectContentUrls,
-  getSlackWebhooksForProjectContentUrl
-} = require('./data');
-const getMessage = require('./message-template');
+const data = require('./data');
+const getMessage = require('./templates/github-notification');
 const GitHub = require('./github/index');
+const SlackClient = require('./slack/client');
 
 
 // Env
@@ -56,12 +54,13 @@ exports.webhook = async (event, context, callback) => {
 
   // Project information
   const project = await gitHub.fetchProject(project_content_url);
-  const projectUrl = project.html_url;
+  const projectHtmlUrl = project.html_url;
   const projectName = project.name;
 
   // Filter out un-configured
-  const allProjectContentUrls = await getAllProjectContentUrls();
-  if (!allProjectContentUrls.includes(project_content_url)) {
+  const subscriptions = await data.getSubscriptionsForProjectUrl(project_content_url);
+  console.log('subscriptions:', subscriptions);
+  if (!subscriptions.length) {
     const message = `No webhook configured for ${projectName} with URL ${project_content_url}`;
     console.log(message);
     const response = {
@@ -119,7 +118,7 @@ exports.webhook = async (event, context, callback) => {
 
     // Project Board
     projectName,
-    projectUrl,
+    projectUrl: projectHtmlUrl,
 
     // Author
     authorName,
@@ -133,15 +132,20 @@ exports.webhook = async (event, context, callback) => {
   });
 
   try {
-    const slackWebhooks = await getSlackWebhooksForProjectContentUrl(project_content_url);
-    for (let i = 0; i < slackWebhooks.length; i++) {
-      const slackWebhookUrl = slackWebhooks[i];
-      await got.post(slackWebhookUrl, { json: slackMessage });
-      console.log('Slack message sent on webhook:', slackWebhookUrl);
+    for (let i = 0; i < subscriptions.length; i++) {
+      const subscription = subscriptions[i];
+      // raw call
+      const slackClient = new SlackClient(
+        { access_token: process.env.SLACK_OAUTH_TOKEN },
+        { channel_id: subscription.channel_id}
+      );
+      console.log('slackClient:', slackClient);
+      await slackClient.say(slackMessage);
+      console.log('Slack message sent!');
     }
   } catch (err) {
     console.log('Could not send message to Slack.');
-    console.log(err);
+    console.error(err);
     callback(err);
   }
 
@@ -154,25 +158,3 @@ exports.webhook = async (event, context, callback) => {
   callback(null, response);
 };
 
-
-exports.projects = async (event, context, callback) => {
-  try {
-    let repo = false;
-    if (event.queryStringParameters && event.queryStringParameters.repo) {
-      repo = event.queryStringParameters.repo;
-    }
-    const projects = Boolean(repo)
-      ? await gitHub.fetchRepoProjects(repo)
-      : await gitHub.fetchOrgProjects();
-    const abbrProjects = projects.map(({name, url}) => `${name} - ${url}`);
-    const body = { abbrProjects };
-    const response = {
-      statusCode: 200,
-      body: JSON.stringify(body),
-    };
-    callback(null, response);
-  } catch(e) {
-    console.log(e);
-    callback(new Error(e));
-  }
-}

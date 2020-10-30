@@ -43,28 +43,5 @@ Moved by <${moverUrl}|${moverName}>`,
           }
         ]
       },
-
-      {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: `See ${subjectType}`,
-            },
-            url: subjectUrl,
-            style: 'primary',
-          },
-          {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: `See Board`,
-            },
-            url: projectUrl
-          }
-        ]
-      }
     ]
   });
