@@ -1,3 +1,6 @@
+# What dis?
+![notification-example](./readme/img/work.gif)
+
 This repository contains a lambda function that receives GitHub Board updates (via GitHub Webhook) and forwards them to Slack.
 It allows the user to select which Slack channels get notified when a change is received.
 
