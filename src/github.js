@@ -56,10 +56,8 @@ exports.webhook = async (event, context, callback) => {
 
   // Filter out un-configured
   const subscriptions = await data.getSubscriptionsForProjectUrl(project_content_url);
-  console.log('subscriptions:', subscriptions);
   if (!subscriptions.length) {
-    const message = `No webhook configured for ${projectName} with URL ${project_content_url}`;
-    console.log(message);
+    const message = `No notification for ${projectName} with URL ${project_content_url}`;
     const response = {
       statusCode: 200,
       body: JSON.stringify({ message }),

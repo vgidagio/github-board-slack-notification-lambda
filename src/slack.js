@@ -1,31 +1,21 @@
-// Include the serverless-slack bot framework
 const Slack = require('./slack/index');
 const GitHub = require('./github/index');
 const store = require('./data');
 const { getListProjectsMessage } = require('./templates/projects');
 
-const options = {
-  oauthTableName: process.env.SLACK_OAUTH_TABLE_NAME,
-  installRedirect: process.env.SLACK_INSTALL_REDIRECT,
+
+const slack = new Slack({
+  oauthToken: process.env.SLACK_OAUTH_TOKEN,
   verificationToken: process.env.SLACK_VERIFICATION_TOKEN,
+});
 
-  clientId: process.env.SLACK_CLIENT_ID,
-  clientSecret: process.env.SLACK_CLIENT_SECRET,
-  clientScopes: process.env.SLACK_CLIENT_SCOPES,
-
-  ignoreBots: true,
-};
-
-const slack = new Slack(options);
-
-// Env
 const gitHub = new GitHub({
   webhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
   authToken: process.env.GITHUB_TOKEN,
   org: process.env.GITHUB_ORG,
 });
 
-// The function that AWS Lambda will call
+// Event handler 
 exports.handler = slack.handler.bind(slack);
 
 const getListMessage = async (channelId, repo) => {

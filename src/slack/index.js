@@ -1,96 +1,32 @@
 const EventEmitter = require('events');
 const qs = require('querystring');
-
 const Client = require('./client');
-const oauthStore = require('../aws/DynamoTable');
 
 
 class Slack extends EventEmitter {
   options;
-  store;
-  ignoreBots;
 
   constructor(options = {
-    oauthTableName: null,
-    installRedirect: null,
+    oauthToken: null,
     verificationToken: null,
     ignoreBots: true,
-    clientId: null,
-    clientSecret: null,
-    clientScopes: null,
   }) {
     super();
     this.options = options;
-    this.oauthStore = new oauthStore(options.oauthTableName);
-    this.ignoreBots = options.ignoreBots;
   }
+
 
   handler(event, context, callback) {
     switch (event.httpMethod) {
-      case 'GET':
-        this.oauth(event, context, callback);
-        break;
       case 'POST':
         this.event(event, context, callback);
         break;
     }
   }
 
-  async oauth(event, context, callback) {
-    let payload = event.queryStringParameters;
-
-    console.log('payload:', payload);
-    let redirectUrl = `${this.options.installRedirect}?state=${payload.state}`;
-
-    const fail = error => {
-      this.emit('*', error, payload);
-      this.emit('install_error', error, payload);
-      callback(`${redirectUrl}&error=${JSON.stringify(error)}`);
-    }
-
-    if (payload.code) {
-      try {
-        const options = {
-          clientId: this.options.clientId,
-          clientSecret: this.options.clientSecret,
-        };
-        const response = await Client.install(options, payload);
-        const item = {
-          id: response.team.id,
-          access_token: response.access_token,
-          url: response.incoming_webhook.url,
-          channel: response.incoming_webhook.channel,
-          channel_id: response.incoming_webhook.channel_id,
-          team: response.team,
-        };
-        const result = await this.oauthStore.put(item);
-        console.log('result:', result);
-
-        this.emit('*', payload);
-        this.emit('install_success', payload);
-
-        const redirect = {
-          statusCode: 301,
-          headers: {
-            Location: redirectUrl,
-          },
-          body: '',
-        };
-
-        callback(null, redirect);
-      } catch (e) {
-        fail(e);
-      }
-    } else {
-      // sends a 301 redirect
-      // wut.
-      //callback(this.client.getAuthUrl(payload));
-    }
-  }
-
 
   async event(event, context, callback) {
-    console.log('event:', JSON.stringify(event));
+    // console.log('event:', JSON.stringify(event));
     let payload = event.body;
     if (payload.charAt(0) === "{") {
       payload = JSON.parse(payload);
@@ -102,7 +38,7 @@ class Slack extends EventEmitter {
       payload = JSON.parse(payload.payload);
     }
 
-    console.log('payload:', payload);
+    // console.log('payload:', payload);
 
     // Verification Token
     const verificationToken = this.options.verificationToken;
@@ -126,10 +62,8 @@ class Slack extends EventEmitter {
     }
 
     // Ignore Bot Messages
-    if (!this.ignoreBots || !(payload.event || payload).bot_id) {
-      // Load Auth And Trigger Events
-      const teamId = payload.team_id || payload.team.id;
-      const auth = await this.oauthStore.get(teamId);
+    if (!this.options.ignoreBots || !(payload.event || payload).bot_id) {
+      const auth = this.options.oauthToken; 
       this.notify(payload, auth);
     }
   }
