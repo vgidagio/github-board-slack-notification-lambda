@@ -17,10 +17,8 @@ class Slack extends EventEmitter {
 
 
   handler(event, context, callback) {
-    switch (event.httpMethod) {
-      case 'POST':
-        this.event(event, context, callback);
-        break;
+    if (event.httpMethod === 'POST') {
+      this.event(event, context, callback);
     }
   }
 
@@ -28,7 +26,7 @@ class Slack extends EventEmitter {
   async event(event, context, callback) {
     // console.log('event:', JSON.stringify(event));
     let payload = event.body;
-    if (payload.charAt(0) === "{") {
+    if (payload.charAt(0) === '{') {
       payload = JSON.parse(payload);
     } else {
       payload = qs.parse(payload);
@@ -63,12 +61,12 @@ class Slack extends EventEmitter {
 
     // Ignore Bot Messages
     if (!this.options.ignoreBots || !(payload.event || payload).bot_id) {
-      const auth = this.options.oauthToken; 
+      const auth = this.options.oauthToken;
       this.notify(payload, auth);
     }
   }
 
-  
+
   notify(payload, auth) {
     let events = ['*'];
     let bot = new Client(auth, payload);

@@ -46,4 +46,3 @@ module.exports.getSubscriptionsForProjectUrl = async (project_url) => {
     }
   });
 }
-
