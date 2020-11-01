@@ -47,12 +47,3 @@ module.exports.getSubscriptionsForProjectUrl = async (project_url) => {
   });
 }
 
-module.exports.getSlackWebhooksForProjectContentUrl = async (project_content_url) => {
-  const list = await store.list();
-  return list.reduce((accumulator, item) => {
-    if (item.project_url === project_content_url) {
-      return [...accumulator, item.project_url];
-    }
-    return accumulator;
-  }, [])
-}

@@ -3,28 +3,6 @@ const qs = require('querystring');
 
 class Client {
 
-  static async install(options, payload) {
-    const { clientId, clientSecret } = options;
-    const message = {
-      code: payload.code,
-      client_id: clientId,
-      client_secret: clientSecret,
-    };
-    const { body } = await got.post(
-      'https://slack.com/api/oauth.v2.access',
-      {
-        form: message,
-        responseType: 'json'
-      }
-    );
-
-    if (!body.ok) {
-      throw new Error('Token error: ' + body.error);
-    }
-
-    return body;
-  }
-
   constructor(auth, payload) {
     this.auth = auth;
     this.payload = payload;
@@ -44,8 +22,6 @@ class Client {
     const targetUrl = endPoint.match(/^http/i)
         ? endPoint
         : `https://slack.com/api/${endPoint}`
-    console.log('targetUrl:', targetUrl);
-    console.log('message:', message);
 
     const response = await got.post(
       targetUrl,
@@ -60,11 +36,6 @@ class Client {
   }
 
 
-  /**
-   * Response Url
-   *
-   * @return {String} the payload's response url
-   */
   get response_url() {
     if (this.payload) {
       return this.payload.response_url;
@@ -72,11 +43,6 @@ class Client {
   }
 
 
-  /**
-   * Channel
-   *
-   * @return {String} the payload's channel
-   */
   get channel() {
     let payload = this.payload, event = payload.event;
     // Slash Commands
@@ -91,11 +57,6 @@ class Client {
   }
 
 
-  /**
-   * API Token
-   *
-   * @return {String} the team's API token
-   */
   get token() {
     const auth = this.auth;
     return auth.bot
@@ -104,13 +65,6 @@ class Client {
   }
 
 
-  /**
-   * Send Reply
-   *
-   * @param {object} message - The message to reply with
-   * @param {boolean} ephemeral - Flag to make the message ephemeral
-   * @return {Promise} A promise with the API response
-   */
   async reply(message, ephemeral) {
     if (!this.response_url && ephemeral) {
       // invalid ephemeral requests
@@ -129,23 +83,11 @@ class Client {
   }
 
 
-  /**
-   * Send Private Reply
-   *
-   * @param {object} message - The message to reply with
-   * @return {Promise} A promise with the API response
-   */
   replyPrivate(message) {
     return this.reply(message, true);
   }
 
 
-  /**
-   * Send Message
-   *
-   * @param {object} message - The message to post
-   * @return {Promise} A promise with the API result
-   */
   say(message) {
     return this.send('chat.postMessage', message);
   }

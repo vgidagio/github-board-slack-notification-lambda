@@ -34,8 +34,3 @@ class DynamoTable {
 
 module.exports = DynamoTable;
 
-
-
-
-
-

@@ -88,6 +88,7 @@ class Slack extends EventEmitter {
     }
   }
 
+
   async event(event, context, callback) {
     console.log('event:', JSON.stringify(event));
     let payload = event.body;
@@ -133,11 +134,7 @@ class Slack extends EventEmitter {
     }
   }
 
-  /**
-   * Notify message and process events
-   * @param {Object} payload - The Lambda event
-   * @param {Object} auth - The Slack authentication
-   */
+  
   notify(payload, auth) {
     let events = ['*'];
     let bot = new Client(auth, payload);
@@ -160,7 +157,6 @@ class Slack extends EventEmitter {
     // trigger all events
     events.forEach(name => this.emit(name, payload, bot, this.store));
   }
-
 }
 
 module.exports = Slack;

@@ -1,10 +1,7 @@
-const got = require('got');
-
-// Mine
-const data = require('./data');
-const getMessage = require('./templates/github-notification');
 const GitHub = require('./github/index');
 const SlackClient = require('./slack/client');
+const getMessage = require('./templates/github-notification');
+const data = require('./data');
 
 
 // Env
