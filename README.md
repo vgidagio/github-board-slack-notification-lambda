@@ -20,13 +20,19 @@ https://github.com/organizations/<YOUR ORG NAME>/settings/hooks
 ```
 
 ## Overview
-1. Set up a Slack App, extract the newly generated **OAuth Token** and the **Verification Token**
-2. Set up a Personal Github Token for the bot - [from here](https://github.com/settings/tokens)
+1. Set up a Slack App, extract the newly generated **Verification Token** and the **OAuth Token** 
+   ![notification-example](./readme/img/verification-token.png)
+   ![notification-example](./readme/img/oauth-token.png)
+
+2. Set up a Personal Github Token for the bot; give it repo access - [from here](https://github.com/settings/tokens)
 3. Decide on the `GITHUB_WEBHOOK_SECRET` or [generate one](https://www.howtogeek.com/howto/30184/10-ways-to-generate-a-random-password-from-the-command-line/)
+   ![notification-example](./readme/img/gh-token-repo.png)
 3. Configure the function, see below*
 4. Deploy the function: `$ sls deploy`
 5. Get the two urls: Github webhook and Slack events
-6. Set up a GitHub Webhook using the URL and the SECRET; Only give it permissions to boards
+   ![notification-example](./readme/img/post-deploy.png)
+6. Set up a GitHub Webhook using the `URL` and the `SECRET`; Only give it permissions to boards
+   ![notification-example](./readme/img/project-cards.png)
 7. Finish up the Slack App configuration, see below**
 
 ### Configure the function*
@@ -49,8 +55,11 @@ $ cp serverless.yml.sample serverless.yml
    ```
    <BASE URL>/dev/slack/events
    ```
+   ![notification-example](./readme/img/interactivity-slack.png)
 2. Under **Slash Commands**, proceed to *Create a new command* set the *Command* as `/list-projects` with the same *Request URL*
+   ![notification-example](./readme/img/slack-slash-commands.png)
 3. Under **OAuth & Permissions** > **Bot Token Scopes**, proceed to *Add an OAuth Scope*, `chat:write`
+   ![notification-example](./readme/img/slack-scopes.png)
 
 
 ## Logs

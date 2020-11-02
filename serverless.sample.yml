@@ -1,0 +1,64 @@
+t
+configValidationMode: error
+
+custom:
+  assoc_table_name: project_url_to_channel
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-central-1
+  profile: pers
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:*"
+  environment:
+    # Github
+    GITHUB_WEBHOOK_SECRET: ""
+    GITHUB_TOKEN: ""
+    GITHUB_ORG: ""
+
+    # Slack
+    SLACK_VERIFICATION_TOKEN: ""
+    SLACK_OAUTH_TOKEN: ""
+
+    # State stuff
+    ASSOC_TABLE_NAME: ${self:custom.assoc_table_name}
+
+functions:
+  github:
+    handler: src/github.webhook
+    events:
+      - http: POST /github/webhook
+
+  slack:
+    handler: src/slack.handler
+    events:
+      - http: POST /slack/events
+
+resources:
+  Resources:
+    AssocDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+              AttributeName: id
+              KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.assoc_table_name}
