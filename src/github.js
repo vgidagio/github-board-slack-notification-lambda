@@ -131,12 +131,11 @@ exports.webhook = async (event, context, callback) => {
       const subscription = subscriptions[i];
       // raw call
       const slackClient = new SlackClient(
-        { access_token: process.env.SLACK_OAUTH_TOKEN },
+        process.env.SLACK_OAUTH_TOKEN,
         { channel_id: subscription.channel_id}
       );
-      console.log('slackClient:', slackClient);
+
       await slackClient.say(slackMessage);
-      console.log('Slack message sent!');
     }
   } catch (err) {
     console.log('Could not send message to Slack.');

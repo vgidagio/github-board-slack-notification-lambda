@@ -15,7 +15,7 @@ const gitHub = new GitHub({
   org: process.env.GITHUB_ORG,
 });
 
-// Event handler 
+// Event handler
 exports.handler = slack.handler.bind(slack);
 
 const getListMessage = async (channelId, repo) => {
@@ -90,8 +90,7 @@ slack.on('block_actions', async (msg, bot) => {
       ? onSubscribeAction
       : onUnsubscribeAction;
 
-    const response = await fn(channelId, project);
-    console.log('response:', response);
+    await fn(channelId, project);
 
     const repoName = repo ? repo : 'org level';
     const notification = actionId === 'subscribe'
@@ -99,10 +98,9 @@ slack.on('block_actions', async (msg, bot) => {
       : `:no_bell: Unsubscribed from board <${project.html_url}|${project.name}> (${repoName})`;
 
     const message = await getListMessage(channelId, repo);
-    console.log('message:', message);
 
-    await bot.replyPrivate({ ...message, replace_original: true });
     await bot.say(notification);
+    await bot.replyPrivate({ ...message, replace_original: true });
   } catch(e) {
     console.error(e);
     await bot.replyPrivate({

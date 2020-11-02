@@ -22,11 +22,12 @@ class Client {
         ? endPoint
         : `https://slack.com/api/${endPoint}`
 
+
     const response = await got.post(
       targetUrl,
       {
         headers: {
-          authorization: `Bearer ${this.token}`
+          authorization: `Bearer ${this.auth}`
         },
         json: message,
       }
@@ -53,14 +54,6 @@ class Client {
     // Events API
     else if (event && event.channel) return event.channel;
     else if (event && event.item) return event.item.channel;
-  }
-
-
-  get token() {
-    const auth = this.auth;
-    return auth.bot
-      ? auth.bot.bot_access_token
-      : auth.access_token;
   }
 
 
