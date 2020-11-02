@@ -1,5 +1,4 @@
 const got = require('got');
-const qs = require('querystring');
 
 class Client {
 
