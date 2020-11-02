@@ -24,9 +24,9 @@ https://github.com/organizations/<YOUR ORG NAME>/settings/hooks
    ![notification-example](./readme/img/verification-token.png)
    ![notification-example](./readme/img/oauth-token.png)
 
-2. Set up a Personal Github Token for the bot; give it repo access - [from here](https://github.com/settings/tokens)
-3. Decide on the `GITHUB_WEBHOOK_SECRET` or [generate one](https://www.howtogeek.com/howto/30184/10-ways-to-generate-a-random-password-from-the-command-line/)
+2. Set up a Personal Github Token for the bot; give it repo access - [here](https://github.com/settings/tokens)
    ![notification-example](./readme/img/gh-token-repo.png)
+3. Decide on the `GITHUB_WEBHOOK_SECRET` or [generate one](https://www.howtogeek.com/howto/30184/10-ways-to-generate-a-random-password-from-the-command-line/)
 3. Configure the function, see below*
 4. Deploy the function: `$ sls deploy`
 5. Get the two urls: Github webhook and Slack events
