@@ -1,7 +1,7 @@
 const Slack = require('./slack/index');
 const GitHub = require('./github/index');
 const store = require('./data');
-const { getListProjectsMessage } = require('./templates/projects');
+const { getListProjectsMessage } = require('./messages/projects');
 
 
 const slack = new Slack({

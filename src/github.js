@@ -1,6 +1,6 @@
 const GitHub = require('./github/index');
 const SlackClient = require('./slack/client');
-const getMessage = require('./templates/github-notification');
+const getMessage = require('./messages/move-activity');
 const data = require('./data');
 
 
@@ -82,11 +82,13 @@ exports.webhook = async (event, context, callback) => {
   const isIssue = !!content_url;
   const subjectType = isIssue ? 'Issue' : 'Note';
   let subjectName;
+  let subjectNumber;
   let subjectUrl;
 
   if (isIssue) {
     const { data: issue } = await gitHub.request(content_url);
     subjectName = issue.title;
+    subjectNumber = issue.number;
     subjectUrl = issue.html_url;
     authorName = issue.user.login;
     authorUrl = issue.user.html_url;
@@ -104,6 +106,7 @@ exports.webhook = async (event, context, callback) => {
   const slackMessage = getMessage({
     // Subject: name or issue
     subjectType,
+    subjectNumber,
     subjectName,
     subjectUrl,
 

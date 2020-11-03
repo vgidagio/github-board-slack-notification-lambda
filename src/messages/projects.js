@@ -1,3 +1,4 @@
+const { escape, url } = require('./utils');
 const projectToBlock = (project, isSubscribed, repo) => {
   const value = project.url + '--' + repo;
   let accessory = {
@@ -29,7 +30,7 @@ const projectToBlock = (project, isSubscribed, repo) => {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `<${project.html_url}|${project.name}>`
+      text: url(project.html_url, project.name)
     },
     accessory,
   }
@@ -41,7 +42,7 @@ module.exports.getListProjectsMessage = (projects, allSubscriptions, repo) => {
     return projectToBlock(project, isSubscribed, repo)
   });
   const title = repo
-    ? `Projects for *${repo}*`
+    ? `Projects for *${escape(repo)}*`
     : `Projects for Organization`;
 
   return {
